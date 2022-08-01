@@ -1,0 +1,17 @@
+body {
+  background-color: Beige ;
+}
+
+hr {
+   ;
+  border-style: none;
+  border-top-style: dotted;
+  border-width: 15px;
+  border-color: white;
+  height: 0px;
+  width: 15%;
+}
+
+img {
+  height: 1000px;
+}
