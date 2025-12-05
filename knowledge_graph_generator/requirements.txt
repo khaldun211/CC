@@ -1,0 +1,6 @@
+# Knowledge Graph Generator Dependencies
+networkx>=3.0
+matplotlib>=3.7.0
+spacy>=3.5.0
+pyvis>=0.3.2
+argparse>=1.4.0

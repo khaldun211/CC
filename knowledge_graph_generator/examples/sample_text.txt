@@ -1,0 +1,19 @@
+Machine Learning and Artificial Intelligence
+
+Machine Learning is a subset of Artificial Intelligence. AI uses algorithms to simulate human intelligence.
+Deep Learning is a subset of Machine Learning. Deep Learning uses neural networks.
+
+Python is a programming language. Python has many libraries for Machine Learning.
+TensorFlow is a framework. TensorFlow uses Python. TensorFlow is developed by Google.
+PyTorch is a framework. PyTorch uses Python. PyTorch is developed by Facebook.
+
+Neural Networks contain layers. Layers have neurons. Neurons connect to other neurons.
+Convolutional Neural Networks are used for image processing.
+Recurrent Neural Networks are used for sequence data.
+
+Data Scientists use Machine Learning. Data Scientists analyze data.
+The model is trained on data. The training process uses optimization algorithms.
+
+GPT is a transformer model. GPT is developed by OpenAI.
+BERT is a transformer model. BERT is developed by Google.
+Transformers use attention mechanisms.
