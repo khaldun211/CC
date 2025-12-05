@@ -197,7 +197,7 @@ class KnowledgeGraphGenerator:
             output_path = f'knowledge_graph.{format}'
 
         if format == 'html':
-            return visualizer.to_pyvis(output_path)
+            return visualizer.to_interactive_html(output_path)
         elif format == 'png':
             fig = visualizer.to_matplotlib(output_path)
             return output_path
