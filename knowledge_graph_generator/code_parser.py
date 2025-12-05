@@ -15,11 +15,14 @@ from pathlib import Path
 class CodeEntity:
     """Represents a code entity (class, function, variable, etc.)."""
     name: str
-    entity_type: str  # class, function, method, variable, import, module
+    entity_type: str  # class, function, method, variable, import, module, entry_point, exit_point
     file_path: Optional[str] = None
     line_number: Optional[int] = None
     parent: Optional[str] = None
     docstring: Optional[str] = None
+    is_entry_point: bool = False  # True if this is where code execution starts
+    is_exit_point: bool = False   # True if this is where code execution ends
+    execution_order: Optional[int] = None  # Order in execution flow
     attributes: Dict = field(default_factory=dict)
 
     def __hash__(self):
@@ -77,14 +80,156 @@ class PythonCodeParser:
         self.entities = []
         self.relationships = []
         self.file_path = file_path
+        self.execution_order = 0
 
         try:
             tree = ast.parse(code)
             self._visit(tree)
+            self._detect_entry_points(tree, code)
+            self._add_flow_relationships()
         except SyntaxError as e:
             print(f"Syntax error parsing Python code: {e}")
 
         return self.entities, self.relationships
+
+    def _detect_entry_points(self, tree: ast.AST, code: str):
+        """Detect entry points like if __name__ == '__main__' and main()."""
+        # Add START node
+        start_entity = CodeEntity(
+            name="START",
+            entity_type="entry_point",
+            file_path=self.file_path,
+            line_number=1,
+            is_entry_point=True,
+            execution_order=0,
+            docstring="Program entry point"
+        )
+        self.entities.append(start_entity)
+
+        # Check for if __name__ == "__main__"
+        has_main_block = 'if __name__' in code and '__main__' in code
+
+        # Find main function or entry block
+        entry_target = None
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                # Check for if __name__ == "__main__"
+                if self._is_main_check(node):
+                    entry_target = "__main__"
+                    main_entity = CodeEntity(
+                        name="__main__",
+                        entity_type="entry_point",
+                        file_path=self.file_path,
+                        line_number=node.lineno,
+                        is_entry_point=True,
+                        execution_order=1,
+                        docstring="Main execution block"
+                    )
+                    self.entities.append(main_entity)
+
+                    # Add relationship from START to __main__
+                    self.relationships.append(CodeRelationship(
+                        source="START",
+                        target="__main__",
+                        relation_type="starts_at",
+                        file_path=self.file_path,
+                        line_number=1
+                    ))
+
+                    # Find what gets called in main block
+                    for child in ast.walk(node):
+                        if isinstance(child, ast.Call):
+                            func_name = self._get_name(child.func)
+                            if func_name:
+                                self.relationships.append(CodeRelationship(
+                                    source="__main__",
+                                    target=func_name,
+                                    relation_type="executes",
+                                    file_path=self.file_path,
+                                    line_number=child.lineno if hasattr(child, 'lineno') else node.lineno
+                                ))
+
+        # If no __main__ block, look for main() function
+        if not entry_target:
+            for entity in self.entities:
+                if entity.name == 'main' and entity.entity_type == 'function':
+                    entry_target = 'main'
+                    entity.is_entry_point = True
+                    entity.execution_order = 1
+                    self.relationships.append(CodeRelationship(
+                        source="START",
+                        target="main",
+                        relation_type="starts_at",
+                        file_path=self.file_path,
+                        line_number=1
+                    ))
+                    break
+
+        # If still no entry, connect START to first class or function
+        if not entry_target:
+            for entity in sorted(self.entities, key=lambda e: e.line_number or 999):
+                if entity.entity_type in ('class', 'function') and entity.name != 'START':
+                    self.relationships.append(CodeRelationship(
+                        source="START",
+                        target=entity.name,
+                        relation_type="starts_at",
+                        file_path=self.file_path,
+                        line_number=1
+                    ))
+                    break
+
+        # Add END node
+        end_entity = CodeEntity(
+            name="END",
+            entity_type="exit_point",
+            file_path=self.file_path,
+            line_number=9999,
+            is_exit_point=True,
+            execution_order=9999,
+            docstring="Program exit point"
+        )
+        self.entities.append(end_entity)
+
+    def _is_main_check(self, node: ast.If) -> bool:
+        """Check if this is an 'if __name__ == __main__' block."""
+        try:
+            test = node.test
+            if isinstance(test, ast.Compare):
+                if isinstance(test.left, ast.Name) and test.left.id == '__name__':
+                    for comparator in test.comparators:
+                        if isinstance(comparator, ast.Constant) and comparator.value == '__main__':
+                            return True
+                        if isinstance(comparator, ast.Str) and comparator.s == '__main__':
+                            return True
+        except:
+            pass
+        return False
+
+    def _add_flow_relationships(self):
+        """Add execution flow relationships based on line numbers and calls."""
+        # Sort entities by line number
+        sorted_entities = sorted(
+            [e for e in self.entities if e.line_number and e.entity_type in ('class', 'function', 'method')],
+            key=lambda e: e.line_number
+        )
+
+        # Assign execution order
+        for i, entity in enumerate(sorted_entities):
+            entity.execution_order = i + 2  # START is 0, __main__ is 1
+
+        # Find functions/methods that don't call anything (potential exit points)
+        callers = set(r.source for r in self.relationships if r.relation_type == 'calls')
+        for entity in self.entities:
+            if entity.entity_type in ('function', 'method') and entity.name not in callers:
+                # This function doesn't call others - potential leaf node
+                if not any(r.source == entity.name and r.relation_type == 'calls' for r in self.relationships):
+                    self.relationships.append(CodeRelationship(
+                        source=entity.name,
+                        target="END",
+                        relation_type="ends_at",
+                        file_path=self.file_path,
+                        line_number=entity.line_number
+                    ))
 
     def _visit(self, node: ast.AST, parent: Optional[str] = None):
         """Visit AST nodes recursively."""

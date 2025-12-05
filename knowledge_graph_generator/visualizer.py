@@ -312,6 +312,8 @@ class GraphVisualizer:
             'variable': '#2ecc71',
             'import': '#f39c12',
             'module': '#1abc9c',
+            'entry_point': '#00ff00',   # Bright green for START
+            'exit_point': '#ff0000',     # Bright red for END
             'PERSON': '#e74c3c',
             'ORG': '#3498db',
             'GPE': '#2ecc71',
@@ -334,6 +336,9 @@ class GraphVisualizer:
             'has': '#27ae60',
             'depends_on': '#e67e22',
             'exports': '#16a085',
+            'starts_at': '#00ff00',      # Green for flow start
+            'executes': '#00ffff',       # Cyan for execution
+            'ends_at': '#ff0000',        # Red for flow end
             'default': '#7f8c8d'
         }
 
@@ -773,6 +778,8 @@ class GraphVisualizer:
                 'variable': 'dot',
                 'import': 'triangle',
                 'module': 'hexagon',
+                'entry_point': 'star',
+                'exit_point': 'star',
                 'default': 'box'
             }};
             return shapes[type] || shapes['default'];
@@ -977,11 +984,11 @@ class GraphVisualizer:
 
         function focusOnFlow() {{
             document.querySelectorAll('.filter-section input[type="checkbox"]').forEach(cb => cb.checked = false);
-            ['node_class', 'node_function', 'node_method'].forEach(id => {{
+            ['node_entry_point', 'node_exit_point', 'node_class', 'node_function', 'node_method'].forEach(id => {{
                 const cb = document.getElementById(id);
                 if (cb) cb.checked = true;
             }});
-            ['edge_calls', 'edge_contains'].forEach(id => {{
+            ['edge_calls', 'edge_contains', 'edge_starts_at', 'edge_executes', 'edge_ends_at'].forEach(id => {{
                 const cb = document.getElementById(id);
                 if (cb) cb.checked = true;
             }});
