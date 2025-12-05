@@ -1,0 +1,14 @@
+# Generated output files
+*.html
+!examples/*.html
+*.png
+*.dot
+lib/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test outputs
+preview.md
